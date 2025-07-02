@@ -5,10 +5,10 @@ import cv2
 import os
 import mimetypes
 
-# Replace these values with your own
-api_id = ""
-api_hash = ""
-bot_token = ""
+# Get credentials from environment variables (Render-compatible)
+api_id = int(os.environ.get("API_ID", 0))  # Default 0 in case not set
+api_hash = os.environ.get("API_HASH", "")
+bot_token = os.environ.get("BOT_TOKEN", "")
 
 app = Client("screenshot_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
