@@ -2,8 +2,8 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import fitz
 import cv2
-from aiohttp import web 
-import asyncio
+#from aiohttp import web 
+#import asyncio
 import os
 import mimetypes
 
@@ -122,24 +122,7 @@ async def file_handler(client, message):
 async def cancel(client, callback_query):
     await callback_query.message.delete()
 
-# ✅ HEALTH CHECK SERVER ON PORT 8080
-async def handle_health(request):
-    return web.Response(text="OK")
 
-async def run_health_server():
-    app = web.Application()
-    app.router.add_get("/", handle_health)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, port=8080)
-    await site.start()
-
-# ✅ Run bot and health server together — FIXED
-async def main():
-    await app.start()
-    await run_health_server()
-    print("✅ Bot is running... Health server ready at http://localhost:8080/")
-    await asyncio.Event().wait()  # ⬅️ Proper way to keep it alive
-
+# Run the bot
 if __name__ == "__main__":
-    asyncio.run(main())
+    app.run()
