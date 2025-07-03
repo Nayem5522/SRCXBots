@@ -1,9 +1,9 @@
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import fitz
 import cv2
+from aiohttp import web 
 import os
-import time
 import mimetypes
 
 # Get credentials from environment variables (Render-compatible)
@@ -61,11 +61,11 @@ def screenshot_video(file_path, max_frames=10):
 async def start(client, message):
     buttons = [
         [
-            InlineKeyboardButton("📣 Join my channel 📣", url="https://t.me/PrimeXBots"),
-            InlineKeyboardButton("👥 Support group 👥", url="https://t.me/Prime_Botz_Support"),
+            InlineKeyboardButton("📣 Join my channel 📣", url="https://t.me/NT_BOT_CHANNEL"),
+            InlineKeyboardButton("👥 Support group 👥", url="https://t.me/NT_BOTS_SUPPORT"),
         ],
         [
-            InlineKeyboardButton("👩‍💻 Developer 👩‍💻", url="https://t.me/Prime_Nayem"),
+            InlineKeyboardButton("👩‍💻 Developer 👩‍💻", url="https://t.me/LISA_FAN_LK"),
             InlineKeyboardButton("⛔️ Cancel ⛔️", callback_data="cancel"),
         ]
     ]
@@ -82,76 +82,63 @@ async def help(client, message):
 
 # Handler for file messages
 @app.on_message(filters.document | filters.video)
-async def file_handler(client: Client, message: Message):
+async def file_handler(client, message):
     file = message.document or message.video
-    reply_message = await message.reply_text("📤 Downloading file...")
-
-    async def progress_bar(current, total, msg, start_time):
-        now = time.time()
-        elapsed = now - start_time
-        speed = current / elapsed if elapsed > 0 else 0
-        percentage = current * 100 / total if total else 0
-        done_mb = current / 1024 ** 2
-        total_mb = total / 1024 ** 2
-        time_taken = int(elapsed)
-
-        bar = "▣" * int(percentage // 10) + "▢" * (10 - int(percentage // 10))
-
-        text = f"""📤 Downloading file...
-┏━━━━✦[{bar}]✦━━━━
-┣ 📦 Pʀᴏɢʀᴇꜱꜱ : {percentage:.1f}%
-┣ ✅ Dᴏɴᴇ : {done_mb:.2f} MB
-┣ 📁 Tᴏᴛᴀʟ : {total_mb:.2f} MB
-┣ 🚀 Sᴘᴇᴇᴅ : {speed / 1024 ** 2:.2f} MB/s
-┣ 🕒 Tɪᴍᴇ : {time_taken}s
-┗━━━━━━━━━━━━━━━━━━━━"""
-
-        try:
-            await msg.edit_text(text)
-        except:
-            pass
-
-    start_time = time.time()
-    file_path = await client.download_media(
-        file,
-        progress=progress_bar,
-        progress_args=(reply_message, start_time)
-    )
-
+    reply_message = await message.reply_text("Downloading file...")
+    file_path = await app.download_media(file)
+    
     if not file_path:
-        await reply_message.edit_text("❌ Failed to download the file.")
+        await message.reply_text("Failed to download the file.")
         return
-
+    
     mime_type, _ = mimetypes.guess_type(file_path)
     print(f"File MIME type: {mime_type}")
-
+    
     if mime_type in ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
-        await reply_message.edit_text("📝 Processing document...")
+        await reply_message.edit_text("Processing document...")
         screenshots = screenshot_document(file_path)
     elif mime_type in ["video/mp4", "video/webm", "video/x-matroska", "video/avi", "video/quicktime", "video/x-msvideo", "video/x-ms-wmv"]:
-        await reply_message.edit_text("🎬 Processing video...")
+        await reply_message.edit_text("Processing video...")
         screenshots = screenshot_video(file_path)
     else:
-        await reply_message.edit_text(f"❌ Unsupported file type: {mime_type}")
+        await reply_message.edit_text(f"Unsupported file type: {mime_type}")
         os.remove(file_path)
         return
 
     os.remove(file_path)
 
     if screenshots:
-        await reply_message.edit_text("📤 Uploading screenshots...")
+        await reply_message.edit_text("Uploading screenshots...")
         for screenshot_path in screenshots:
-            await client.send_photo(chat_id=message.chat.id, photo=screenshot_path)
+            await app.send_photo(chat_id=message.chat.id, photo=screenshot_path)
             os.remove(screenshot_path)
         await reply_message.delete()
         await message.delete()
     else:
-        await reply_message.edit_text("❌ Failed to process the file.")
+        await reply_message.edit_text("Failed to process the file.")
 
 @app.on_callback_query(filters.regex("cancel"))
 async def cancel(client, callback_query):
     await callback_query.message.delete()
 
-# Run the bot
+# ✅ HEALTH CHECK SERVER ON PORT 8080
+async def handle_health(request):
+    return web.Response(text="OK")
+
+async def run_health_server():
+    app = web.Application()
+    app.router.add_get("/", handle_health)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, port=8080)
+    await site.start()
+
+# ✅ Run bot and health server together — FIXED
+async def main():
+    await app.start()
+    await run_health_server()
+    print("✅ Bot is running... Health server ready at http://localhost:8080/")
+    await asyncio.Event().wait()  # ⬅️ Proper way to keep it alive
+
 if __name__ == "__main__":
-    app.run()
+    asyncio.run(main())
